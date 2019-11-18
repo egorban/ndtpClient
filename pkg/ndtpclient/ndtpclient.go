@@ -24,9 +24,12 @@ var (
 )
 
 const (
-	defaultBufferSize = 1024
-	writeTimeout      = 10 * time.Second
-	readTimeout       = 180 * time.Second
+	defaultBufferSize        = 1024
+	writeTimeout             = 10 * time.Second
+	readTimeout              = 180 * time.Second
+	NPH_SRV_GENERIC_CONTROLS = 0
+	NPH_SRV_NAVDATA          = 1
+	NPH_RESULT               = 0
 )
 
 func Start(addr string, terminalID uint32, num int) {
@@ -79,10 +82,10 @@ func sendAndReceive(c net.Conn, packet []byte) (err error) {
 	}
 	parsedPacket.Parse(b[:])
 	log.Printf("receive: %v", parsedPacket.String())
-	switch parsedPacket.Nph.ServiceID {
-	case 0:
+	if parsedPacket.Nph.ServiceID == NPH_SRV_GENERIC_CONTROLS {
 		numControl++
-	case 1:
+	}
+	if parsedPacket.Nph.ServiceID == NPH_SRV_NAVDATA && parsedPacket.Nph.PacketType == NPH_RESULT {
 		numConfirm++
 	}
 	return
