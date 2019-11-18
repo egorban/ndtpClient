@@ -2,7 +2,6 @@ package ndtpclient
 
 import (
 	"encoding/binary"
-	"flag"
 	"github.com/ashirko/navprot/pkg/ndtp"
 	"log"
 	"net"
