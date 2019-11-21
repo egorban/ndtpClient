@@ -25,13 +25,13 @@ var (
 const (
 	defaultBufferSize     = 1024
 	writeTimeout          = 10 * time.Second
-	readTimeout          = 180 * time.Second
+	readTimeout           = 180 * time.Second
 	NphSrvGenericControls = 0
 	NphSrvNavdata         = 1
 	NphResult             = 0
 )
 
-func Start(addr string, terminalID int, num int) {
+func Start(addr string, terminalID int, numPackets int, numControlPackets int) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Printf("got error: %v", err)
@@ -41,10 +41,11 @@ func Start(addr string, terminalID int, num int) {
 	if err != nil {
 		log.Printf("got error: %v", err)
 	}
-	go sendData(conn, num)
-	receiveReply(conn, num)
+	go sendData(conn, numPackets)
+	receiveReply(conn, numPackets+numControlPackets)
 	log.Printf("Results:\nNum sent packets: %d\nNum received confirm packets: %d\nNum received control packets: %d",
 		numSend, numConfirm, numControl)
+	time.Sleep(1 * time.Second)
 }
 
 func setConnection(conn net.Conn, terminalID int) (err error) {
@@ -67,8 +68,8 @@ func setConnection(conn net.Conn, terminalID int) (err error) {
 	return
 }
 
-func sendData(conn net.Conn, num int) {
-	for i := 0; i < num; i++ {
+func sendData(conn net.Conn, numPackets int) {
+	for i := 0; i < numPackets; i++ {
 		err := sendNewMessage(conn, i)
 		if err != nil {
 			log.Printf("got error: %v", err)
@@ -76,30 +77,36 @@ func sendData(conn net.Conn, num int) {
 	}
 }
 
-func receiveReply(conn net.Conn, num int) {
+func receiveReply(conn net.Conn, numPacketsToReceive int) {
 	var restBuf []byte
-	for i := 0; i < num; i++ {
+	numReadPackets := 0
+	for numReadPackets < numPacketsToReceive {
 		var b [defaultBufferSize]byte
 		err := conn.SetReadDeadline(time.Now().Add(readTimeout))
 		if err != nil {
-		    log.Printf("got error: %v", err)
-        }
+			log.Printf("got error: %v", err)
+		}
 		n, err := conn.Read(b[:])
 		if err != nil {
 			log.Printf("got error: %v", err)
 		}
 		restBuf = append(restBuf, b[:n]...)
-		parsedPacket := new(ndtp.Packet)
-		restBuf, err = parsedPacket.Parse(restBuf)
-		if err != nil {
-			log.Printf("got error: %v", err)
-		} else {
-			log.Printf("receive: %v", parsedPacket.String())
-			if parsedPacket.Nph.ServiceID == NphSrvGenericControls {
-				numControl++
+		for len(restBuf) != 0 {
+			parsedPacket := new(ndtp.Packet)
+			restBuf, err = parsedPacket.Parse(restBuf)
+			if err != nil {
+				log.Printf("error while parsing NDTP: %v", err)
+				break
 			}
-			if parsedPacket.Nph.ServiceID == NphSrvNavdata && parsedPacket.Nph.PacketType == NphResult {
+			numReadPackets++
+			if parsedPacket.Nph.ServiceID == NphSrvGenericControls {
+				log.Printf("receive control packet: %v", parsedPacket.String())
+				numControl++
+			} else if parsedPacket.Nph.ServiceID == NphSrvNavdata && parsedPacket.Nph.PacketType == NphResult {
+				log.Printf("receive confirm: %v", parsedPacket.String())
 				numConfirm++
+			} else {
+				log.Printf("receive other reply: %v", parsedPacket.String())
 			}
 		}
 	}
