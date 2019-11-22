@@ -37,13 +37,15 @@ func Start(addr string, terminalID int, numPackets int, numControlPackets int) {
 		log.Printf("got error: %v", err)
 	}
 	defer conn.Close()
+	log.Printf("NDTP client was started. Server address: %v; Terminal ID: %v; Number data packets to send: %v; Number control packets to receive: %v",
+		addr, terminalID, numPackets, numControlPackets)
 	err = setConnection(conn, terminalID)
 	if err != nil {
 		log.Printf("got error: %v", err)
 	}
 	go sendData(conn, numPackets)
 	receiveReply(conn, numPackets+numControlPackets)
-	log.Printf("Results:\nNum sent packets: %d\nNum received confirm packets: %d\nNum received control packets: %d",
+	log.Printf("NDTP client was finished. Number sent packets = %d; Number received confirm packets = %d; Number received control packets: %d",
 		numSend, numConfirm, numControl)
 	time.Sleep(1 * time.Second)
 }
@@ -130,7 +132,7 @@ func sendNewMessage(conn net.Conn, i int) (err error) {
 	if err != nil {
 		return
 	}
-	log.Printf("send: %v", parsedPacket.String())
+	log.Printf("send packet: %v", parsedPacket.String())
 	numSend++
 	return
 }
