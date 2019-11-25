@@ -91,6 +91,7 @@ func receiveReply(conn net.Conn, numPacketsToReceive int) {
 		n, err := conn.Read(b[:])
 		if err != nil {
 			log.Printf("got error: %v", err)
+			break;
 		}
 		restBuf = append(restBuf, b[:n]...)
 		for len(restBuf) != 0 {
