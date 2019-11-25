@@ -26,9 +26,9 @@ const (
 	defaultBufferSize     = 1024
 	writeTimeout          = 10 * time.Second
 	readTimeout           = 180 * time.Second
-	NphSrvGenericControls = 0
-	NphSrvNavdata         = 1
-	NphResult             = 0
+	nphSrvGenericControls = 0
+	nphSrvNavdata         = 1
+	nphResult             = 0
 )
 
 func Start(addr string, terminalID int, numPackets int, numControlPackets int) {
@@ -45,8 +45,20 @@ func Start(addr string, terminalID int, numPackets int, numControlPackets int) {
 	}
 	go sendData(conn, numPackets)
 	receiveReply(conn, numPackets+numControlPackets)
-	log.Printf("NDTP client was finished. Number sent packets = %d; Number received confirm packets = %d; Number received control packets: %d",
-		numSend, numConfirm, numControl)
+	endingSent := ""
+	if numSend > 1 {
+		endingSent = "s"
+	}
+	endingConf := ""
+	if numConfirm > 1 {
+		endingConf = "s"
+	}
+	isControl := ""
+	if numControl == 1 {
+		isControl = "; received 1 control packet"
+	}
+	log.Printf("NDTP client has completed work. Sent %d packet"+endingSent+"; received %d confirmation"+endingConf+isControl,
+		numSend, numConfirm)
 	time.Sleep(1 * time.Second)
 }
 
@@ -91,7 +103,7 @@ func receiveReply(conn net.Conn, numPacketsToReceive int) {
 		n, err := conn.Read(b[:])
 		if err != nil {
 			log.Printf("got error: %v", err)
-			break;
+			break
 		}
 		restBuf = append(restBuf, b[:n]...)
 		for len(restBuf) != 0 {
@@ -102,10 +114,10 @@ func receiveReply(conn net.Conn, numPacketsToReceive int) {
 				break
 			}
 			numReadPackets++
-			if parsedPacket.Nph.ServiceID == NphSrvGenericControls {
+			if parsedPacket.Nph.ServiceID == nphSrvGenericControls {
 				log.Printf("receive control packet: %v", parsedPacket.String())
 				numControl++
-			} else if parsedPacket.Nph.ServiceID == NphSrvNavdata && parsedPacket.Nph.PacketType == NphResult {
+			} else if parsedPacket.Nph.ServiceID == nphSrvNavdata && parsedPacket.Nph.PacketType == nphResult {
 				log.Printf("receive confirm: %v", parsedPacket.String())
 				numConfirm++
 			} else {
