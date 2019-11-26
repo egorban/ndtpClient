@@ -59,7 +59,7 @@ func Start(addr string, terminalID int, numPackets int, numControlPackets int) {
 	}
 	log.Printf("NDTP client has completed work. Sent %d packet"+endingSent+"; received %d confirmation"+endingConf+isControl,
 		numSend, numConfirm)
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 }
 
 func setConnection(conn net.Conn, terminalID int) (err error) {
