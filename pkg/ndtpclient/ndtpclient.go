@@ -89,6 +89,7 @@ func sendData(conn net.Conn, numPackets int) {
 			log.Printf("got error: %v", err)
 		}
 	}
+	log.Printf("finish send data %d",numPackets)
 }
 
 func receiveReply(conn net.Conn, numPacketsToReceive int) {
@@ -105,6 +106,7 @@ func receiveReply(conn net.Conn, numPacketsToReceive int) {
 			log.Printf("got error: %v", err)
 			break
 		}
+		log.Printf("read n byte: %d",n)
 		restBuf = append(restBuf, b[:n]...)
 		for len(restBuf) != 0 {
 			parsedPacket := new(ndtp.Packet)
@@ -124,7 +126,9 @@ func receiveReply(conn net.Conn, numPacketsToReceive int) {
 				log.Printf("receive other reply: %v", parsedPacket.String())
 			}
 		}
+		log.Printf("numReadPackets: %d",numReadPackets)
 	}
+	log.Printf("finish receive reply numReadPackets: %d",numReadPackets)
 }
 
 func formAuthPacket(terminalID int) []byte {
