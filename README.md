@@ -1,9 +1,7 @@
-Для демонстрации работы tcpmirror в связке с egtsServ и ndtpServ
+Эмулятор ndtp клиента для tcpmirror
 
 example run: 
-go run main.go -s "localhost:9000 -i 1 -n 100 -c 0
+go run main.go -s "localhost:9000 -i 1
 
 -s - адрес КС
 -i - ID БНСТ
--n - количество пакетов, необходимое для отправки
--c - количество пакетов с управляющим воздействием, необходимое для получения
