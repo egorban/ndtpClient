@@ -16,30 +16,50 @@ var packetAuth = []byte{126, 126, 59, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 
 	0, 6, 0, 2, 0, 2, 3, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 51, 53, 53, 48, 57, 52, 48, 52, 51, 49, 56,
 	56, 51, 49, 49, 50, 53, 48, 48, 49, 54, 53, 48, 53, 56, 49, 53, 53, 51, 55, 0}
 
+var (
+	numSend    = 0
+	numConfirm = 0
+	numControl = 0
+)
+
 const (
 	defaultBufferSize     = 1024
 	writeTimeout          = 10 * time.Second
 	readTimeout           = 180 * time.Second
-	sendPeriod            = 20 * time.Second
 	nphSrvGenericControls = 0
 	nphSrvNavdata         = 1
 	nphResult             = 0
 )
 
-func Start(addr string, terminalID int) {
+func Start(addr string, terminalID int, numPackets int, numControlPackets int) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Printf("got error: %v", err)
-		return
 	}
 	defer conn.Close()
-	log.Printf("NDTP client was started. Server address: %v; Terminal ID: %v", addr, terminalID)
+	log.Printf("NDTP client was started. Server address: %v; Terminal ID: %v; Number data packets to send: %v; Number control packets to receive: %v",
+		addr, terminalID, numPackets, numControlPackets)
 	err = setConnection(conn, terminalID)
 	if err != nil {
 		log.Printf("got error: %v", err)
 	}
-	go sendData(conn)
-	receiveReply(conn)
+	go sendData(conn, numPackets)
+	receiveReply(conn, numPackets+numControlPackets)
+	endingSent := ""
+	if numSend > 1 {
+		endingSent = "s"
+	}
+	endingConf := ""
+	if numConfirm > 1 {
+		endingConf = "s"
+	}
+	isControl := ""
+	if numControl == 1 {
+		isControl = "; received 1 control packet"
+	}
+	log.Printf("NDTP client has completed work. Sent %d packet"+endingSent+"; received %d confirmation"+endingConf+isControl,
+		numSend, numConfirm)
+	time.Sleep(5 * time.Second)
 }
 
 func setConnection(conn net.Conn, terminalID int) (err error) {
@@ -62,20 +82,20 @@ func setConnection(conn net.Conn, terminalID int) (err error) {
 	return
 }
 
-func sendData(conn net.Conn) {
-    i:=0
-	for _ = range time.Tick(sendPeriod) {
+func sendData(conn net.Conn, numPackets int) {
+	for i := 0; i < numPackets; i++ {
 		err := sendNewMessage(conn, i)
 		if err != nil {
 			log.Printf("got error: %v", err)
 		}
-		i++
 	}
+	log.Printf("finish send data %d",numPackets)
 }
 
-func receiveReply(conn net.Conn) {
+func receiveReply(conn net.Conn, numPacketsToReceive int) {
 	var restBuf []byte
-	for {
+	numReadPackets := 0
+	for numReadPackets < numPacketsToReceive {
 		var b [defaultBufferSize]byte
 		err := conn.SetReadDeadline(time.Now().Add(readTimeout))
 		if err != nil {
@@ -86,7 +106,7 @@ func receiveReply(conn net.Conn) {
 			log.Printf("got error: %v", err)
 			break
 		}
-		log.Printf("read n byte: %d", n)
+		log.Printf("read n byte: %d",n)
 		restBuf = append(restBuf, b[:n]...)
 		for len(restBuf) != 0 {
 			parsedPacket := new(ndtp.Packet)
@@ -95,15 +115,20 @@ func receiveReply(conn net.Conn) {
 				log.Printf("error while parsing NDTP: %v", err)
 				break
 			}
+			numReadPackets++
 			if parsedPacket.Nph.ServiceID == nphSrvGenericControls {
 				log.Printf("receive control packet: %v", parsedPacket.String())
+				numControl++
 			} else if parsedPacket.Nph.ServiceID == nphSrvNavdata && parsedPacket.Nph.PacketType == nphResult {
 				log.Printf("receive confirm: %v", parsedPacket.String())
+				numConfirm++
 			} else {
 				log.Printf("receive other reply: %v", parsedPacket.String())
 			}
 		}
+		log.Printf("numReadPackets: %d",numReadPackets)
 	}
+	log.Printf("finish receive reply numReadPackets: %d",numReadPackets)
 }
 
 func formAuthPacket(terminalID int) []byte {
@@ -125,6 +150,7 @@ func sendNewMessage(conn net.Conn, i int) (err error) {
 		return
 	}
 	log.Printf("send packet: %v", parsedPacket.String())
+	numSend++
 	return
 }
 
