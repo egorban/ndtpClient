@@ -1,5 +1,7 @@
+Для демонстрации работы tcpmirror в связке с egtsServ и ndtpServ
+
 example run: 
-go run main.go -s "localhost:9001" -i 1 -n 100 -c 0
+go run main.go -s "localhost:9000 -i 1 -n 100 -c 0
 
 -s - адрес КС
 -i - ID БНСТ
