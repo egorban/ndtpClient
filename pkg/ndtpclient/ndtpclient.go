@@ -63,7 +63,7 @@ func setConnection(conn net.Conn, terminalID int) (err error) {
 }
 
 func sendData(conn net.Conn) {
-    i:=0
+	i := 0
 	for _ = range time.Tick(sendPeriod) {
 		err := sendNewMessage(conn, i)
 		if err != nil {
