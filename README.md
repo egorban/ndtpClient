@@ -1,4 +1,4 @@
-Эмулятор ndtp клиента для tcpmirror
+Эмулятор ndtp клиента для тестирования tcpmirror
 
 example run: 
 go run main.go -s "localhost:9000 -i 1
