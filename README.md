@@ -1,3 +1,5 @@
+Эмулятор ndtp клиента для демонстрации tcpmirror (redmine_3452) в связке с ndtpServer и egtsServ
+
 example run: 
 go run main.go -s "localhost:9001" -i 1 -n 100 -c 0
 
