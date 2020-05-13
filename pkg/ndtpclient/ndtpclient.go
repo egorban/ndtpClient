@@ -1,10 +1,11 @@
 package ndtpclient
 
 import (
-	"github.com/ashirko/navprot/pkg/ndtp"
 	"log"
 	"net"
 	"time"
+
+	"github.com/ashirko/navprot/pkg/ndtp"
 )
 
 var packetNav = []byte{126, 126, 74, 0, 2, 0, 107, 210, 2, 0, 0, 0, 0, 0, 0, 1, 0, 101, 0, 1, 0, 171,
@@ -17,16 +18,16 @@ var packetAuth = []byte{126, 126, 59, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 
 	56, 51, 49, 49, 50, 53, 48, 48, 49, 54, 53, 48, 53, 56, 49, 53, 53, 51, 55, 0}
 
 const (
-	defaultBufferSize     = 1024
-	writeTimeout          = 10 * time.Second
-	readTimeout           = 180 * time.Second
-	sendPeriod            = 20 * time.Second
+	defaultBufferSize = 1024
+	writeTimeout      = 10 * time.Second
+	readTimeout       = 180 * time.Second
+	//sendPeriod            = 20 * time.Second
 	nphSrvGenericControls = 0
 	nphSrvNavdata         = 1
 	nphResult             = 0
 )
 
-func Start(addr string, terminalID int) {
+func Start(addr string, terminalID int, time int) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		log.Printf("got error: %v", err)
@@ -38,7 +39,7 @@ func Start(addr string, terminalID int) {
 	if err != nil {
 		log.Printf("got error: %v", err)
 	}
-	go sendData(conn)
+	go sendData(conn, time)
 	receiveReply(conn)
 }
 
@@ -62,9 +63,9 @@ func setConnection(conn net.Conn, terminalID int) (err error) {
 	return
 }
 
-func sendData(conn net.Conn) {
+func sendData(conn net.Conn, sendPeriod int) {
 	i := 0
-	for _ = range time.Tick(sendPeriod) {
+	for _ = range time.Tick(time.Duration(sendPeriod * 1e9)) {
 		err := sendNewMessage(conn, i)
 		if err != nil {
 			log.Printf("got error: %v", err)
